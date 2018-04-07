@@ -1,5 +1,5 @@
-DISCOVERY_USERNAME = '<your service username>'
-DISCOVERY_PASSWORD = '<your service password>'
+DISCOVERY_USERNAME = 'ef3bc4b1-3cb8-4eac-b8a4-cc8fe7bce4cd'
+DISCOVERY_PASSWORD = 'MygvNhEworvn'
 
-NLU_USERNAME = '<your service username>'
-NLU_PASSWORD = '<your service password>'
+NLU_USERNAME = '6a4f2043-1ae5-4ddb-bf04-ebaa1a4607cf'
+NLU_PASSWORD = 'ite2tIQB7R1w'
