@@ -1,5 +1,5 @@
 from watson_developer_cloud import DiscoveryV1
-from config import DISCOVERY_USERNAME, DISCOVERY_PASSWORD, NLU_USERNAME, NLU_PASSWORD
+from config import DISCOVERY_USERNAME, DISCOVERY_PASSWORD
 from env_config import ENV_CONFIG
 import json
 
@@ -154,3 +154,4 @@ def startup():
     else:
         print("Startup success")
 
+startup()
