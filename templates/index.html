@@ -8,6 +8,8 @@
             <p id="out">
                 <span>Hello, my name is March Madness Chatbot.</span><br>
                 <span>I want to play a game.</span><br>
+                <br>
+                <span>MM-Bot: Before we start, what is your name?</span><br>
             </p>
             <p id="inp">
                 <span id="dir">Message: </span>
@@ -26,10 +28,15 @@
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
         <script>
 $(function() {
+    let textInput = $('#txt-inp');
+    let messageOutput = $('#out');
+    let processingStatus = $('<span>MM-Bot: Processing...<br></span>');
+    let name = 'Player';
+
     function println(text) {
-        var newSpan = document.createElement("SPAN");
-        var newLine = document.createElement("BR");
-        var textNode = document.createTextNode(text);
+        let newSpan = document.createElement("SPAN");
+        let newLine = document.createElement("BR");
+        let textNode = document.createTextNode(text);
         newSpan.appendChild(textNode);
         document.getElementById("out").appendChild(newSpan);
         document.getElementById("out").appendChild(newLine);
@@ -37,8 +44,8 @@ $(function() {
     }
 
     function print(text) {
-        var newSpan = document.createElement("SPAN");
-        var textNode = document.createTextNode(text);
+        let newSpan = document.createElement("SPAN");
+        let textNode = document.createTextNode(text);
         newSpan.appendChild(textNode);
         document.getElementById("out").appendChild(newSpan);
     }
@@ -47,13 +54,35 @@ $(function() {
         window.scrollTo(0,document.body.scrollHeight);
     }
 
-    var textInput = $('#txt-inp');
+    function sendMessage() {
+        let data = {
+            'reply': textInput.val()
+        };
+        println(name + ': ' + data['reply']);
+        textInput.val('');
+        messageOutput.append(processingStatus);
+        $.ajax({
+            type: "POST",
+            url: "{{ url_for('playGame') }}",
+            data: JSON.stringify(data, null, "\t"),
+            contentType: "application/json;charset=UTF-8",
+            success: function(response) {
+                messageOutput.children().last().remove();
+                println('MM-Bot: ' + response['reply']);
+                if ('name' in response) {
+                    name = response['name'];
+                }
+            }
+        });
+    }
+
     $('#txt-inp').keypress(function(e) {
         if (e.which == 13) {
-            println(textInput.val());
-            textInput.val('');
+            sendMessage();
         }
     });
+
+
 });
         </script>
     </body>
