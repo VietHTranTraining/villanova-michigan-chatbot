@@ -1,0 +1,60 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        <title>Tran Shell</title>
+    </head>
+    <body>
+        <div class="container" id="content"> 
+            <p id="out">
+                <span>Hello, my name is March Madness Chatbot.</span><br>
+                <span>I want to play a game.</span><br>
+            </p>
+            <p id="inp">
+                <span id="dir">Message: </span>
+                <div id="stretchbox">
+                    <input type="text" 
+                           id="txt-inp"
+                           autocomplete="off"             
+                           autocorrect="off"
+                           autocapitalize="off" 
+                           autofocus="autofocus"
+                           spellcheck="false">
+                    </input>
+                </div>
+            </p>
+        </div>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+        <script>
+$(function() {
+    function println(text) {
+        var newSpan = document.createElement("SPAN");
+        var newLine = document.createElement("BR");
+        var textNode = document.createTextNode(text);
+        newSpan.appendChild(textNode);
+        document.getElementById("out").appendChild(newSpan);
+        document.getElementById("out").appendChild(newLine);
+        gotoBottom();
+    }
+
+    function print(text) {
+        var newSpan = document.createElement("SPAN");
+        var textNode = document.createTextNode(text);
+        newSpan.appendChild(textNode);
+        document.getElementById("out").appendChild(newSpan);
+    }
+
+    function gotoBottom() {
+        window.scrollTo(0,document.body.scrollHeight);
+    }
+
+    var textInput = $('#txt-inp');
+    $('#txt-inp').keypress(function(e) {
+        if (e.which == 13) {
+            println(textInput.val());
+            textInput.val('');
+        }
+    });
+});
+        </script>
+    </body>
+</html>

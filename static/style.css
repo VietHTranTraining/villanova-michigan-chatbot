@@ -1,0 +1,42 @@
+body {
+    background-color: #000000;
+}
+
+#dir {
+    float: left;
+}
+
+#stretchbox {
+    overflow: hidden;
+}
+
+#stretchbox input {
+    background-color: #000;
+    border: 0px solid;
+    color: #00FF00;
+    font-family: "Courier New"; 
+    line-height: 130%;
+    font-size: 18px;
+    width: 100%;
+    margin-left: 11px;
+}
+
+p {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+*:focus {
+    outline: none;
+}
+
+.container {
+    margin-top: 16px;
+    margin-bottom: 16px;
+    margin-right: 16px;
+    color: #00FF00;
+    font-family: "Courier New"; 
+    line-height: 130%;
+    font-size: 18px;
+}
+
