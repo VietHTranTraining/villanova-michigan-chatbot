@@ -6,10 +6,16 @@
     <body>
         <div class="container" id="content"> 
             <p id="out">
-                <span>Hello, my name is March Madness Chatbot.</span><br>
+                <span>Hello, my name is Caridin, March Madness Chatbot.</span><br>
                 <span>I want to play a game.</span><br>
+                <span>We will ask each other questions relating to the two teams in NCAA 2018 final.</span><br>
+                <span>Questions will be linited to these topics: player name, team name, skill, position, entities.</span><br>
+                <span>
+                    1 point will be added to the player if they manage to answer the question of the other or the other 
+                    can't answer their question
+                </span><br>
                 <br>
-                <span>MM-Bot: Before we start, what is your name?</span><br>
+                <span>Caridin: Before we start, what is your name?</span><br>
             </p>
             <p id="inp">
                 <span id="dir">Message: </span>
@@ -30,7 +36,7 @@
 $(function() {
     let textInput = $('#txt-inp');
     let messageOutput = $('#out');
-    let processingStatus = $('<span>MM-Bot: Processing...<br></span>');
+    let processingStatus = $('<span>Caridin: Processing...<br></span>');
     let name = 'Player';
 
     function println(text) {
@@ -58,6 +64,9 @@ $(function() {
         let data = {
             'reply': textInput.val()
         };
+        if (!data['reply']) {
+            return;
+        }
         println(name + ': ' + data['reply']);
         textInput.val('');
         messageOutput.append(processingStatus);
@@ -68,9 +77,18 @@ $(function() {
             contentType: "application/json;charset=UTF-8",
             success: function(response) {
                 messageOutput.children().last().remove();
-                println('MM-Bot: ' + response['reply']);
-                if ('name' in response) {
+                println('Caridin: ' + response['reply']);
+                if (response.hasOwnProperty('name')) {
                     name = response['name'];
+                } else if (response.hasOwnProperty('result')) {
+                    println(response['score_board']);
+                    println(response['result']);
+                    println('Caridin: Thank you for playing!');
+                    $('#id').remove();
+                } else if (response.hasOwnProperty('question')) {
+                    println(response['question']);
+                } else if (response.hasOwnProperty('error')) {
+                    println(response['error']);
                 }
             }
         });
