@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import json
 import re
 from consts import PLAYERS
-from ibm_utils import startup_discovery, search
+from ibm_utils import startup_discovery, search, get_entities_type
 from str_utils import * 
 
 app = Flask(__name__, template_folder='templates')
@@ -73,63 +73,87 @@ def find_answer(question):
             is_found_name = False
             if len(phrases) > 0:
                 for phrase in phrases:
-                    if is_found_name:
-                        break
                     index_list = [i.start() for i in re.finditer(phrase.lower(), text.lower())]
                     for index in index_list:
-                        if is_found_name:
-                            break
                         sentence = uni2str(get_sentence_by_index(text, index))
                         sentence, sentence_names = extract_name(sentence)
                         for sentence_name in sentence_names:
-                            if is_found_name:
-                                break
-                            elif sentence_name.lower() in PLAYER_NAMES:
+                            if sentence_name.lower() in PLAYER_NAMES:
                                 is_found_name = True 
                                 return True, sentence_name
             elif len(names) > 0: 
-                if is_found_name:
-                    break
                 for name in names:
-                    if is_found_name:
-                        break
                     index_list = [i.start() for i in re.finditer(name.lower(), text.lower())]
                     for index in index_list:
-                        if is_found_name:
-                            break
                         sentence = uni2str(get_sentence_by_index(text, index))
                         sentence, sentence_names = extract_name(sentence)
                         for sentence_name in sentence_names:
-                            if is_found_name:
-                                break
-                            elif (sentence_name.lower() in PLAYER_NAMES) and (sentence_name.lower() != name.lower()):
+                            if (sentence_name.lower() in PLAYER_NAMES) and (sentence_name.lower() != name.lower()):
                                 is_found_name = True 
                                 return True, sentence_name
             else:
                 qt_words = qt.split(' ')
                 for qt_word in qt_words:
-                    if is_found_name:
-                        break
+                    if qt_word == '':
+                        continue
                     index_list = [i.start() for i in re.finditer(qt_word.lower(), text.lower())]
                     for index in index_list:
-                        if is_found_name:
-                            break
                         sentence = uni2str(get_sentence_by_index(text, index))
                         sentence, sentence_names = extract_name(sentence)
                         for sentence_name in sentence_names:
-                            if is_found_name:
-                                break
-                            elif (sentence_name.lower() in PLAYER_NAMES):
+                            if (sentence_name.lower() in PLAYER_NAMES):
                                 is_found_name = True 
                                 return True, sentence_name
             if not is_found_name:
                 return False, "I don't know"
     elif ('team' in qt) and (question_type == 'which'):
-        print "Finding team"
+        for doc in search_result:
+            text = doc['text']
+            is_found_team = False
+            if len(names) > 0:
+                index_list = [i.start() for i in re.finditer(names[0].lower(), text.lower())]
+                for index in index_list:
+                    sentence = uni2str(get_sentence_by_index(text, index))
+                    is_right_sentence = True
+                    for name in names:
+                        if name not in sentence:
+                            is_right_sentence = False
+                            break
+                    if not is_right_sentence:
+                        continue
+                    sentence, sentence_names = extract_name(sentence)
+                    for sentence_name in sentence_names:
+                        entities_types = get_entities_type(doc, sentence_name)
+                        if (sentence_name not in names) and ("Organization" in entities_types):
+                            is_found_team = True
+                            return True, sentence_name
+            elif len(phrases) > 0:
+                for phrase in phrases:
+                    index_list = [i.start() for i in re.finditer(phrase.lower(), text.lower())]
+                    for index in index_list:
+                        sentence = uni2str(get_sentence_by_index(text, index))
+                        sentence, sentence_names = extract_name(sentence)
+                        for sentence_name in sentence_names:
+                            entities_types = get_entities_type(doc, sentence_name)
+                            if "Organization" in entities_types:
+                                is_found_name = True 
+                                return True, sentence_name
+            if not is_found_team:
+                return False, "I don't know"
     elif (len(phrases) > 0) and (len(names) > 0):
         print "Finding skill"
+    elif (len(names) > 0):
+        is_found_entity = False
+        for doc in search_result:
+            for name in names:
+                entities_types = get_entities_type(doc, name)
+                if entities_types != []:
+                    is_found_entity = True
+                    return True, ', '.join(entities_types)
+        if not is_found_entity:
+            return False, "I don't know"
     else:
-        print "Finding Enities"
+        return False, "I don't know"
 
 def gen_question():
     return "What is this?"
