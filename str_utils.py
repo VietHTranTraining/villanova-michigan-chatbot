@@ -1,6 +1,7 @@
 import unicodedata
 
 QUESTIONS = ['which', 'what']
+QT_CATEGORY = ['position', 'player', 'team', 'skill', '']
 UNIMPORT_WORDS = ['was', 'were', 'in', 'on', '']
 QUOTES = ['\'', '"']
 SPEC_CHARS = [',', '.', '?', '!']
@@ -59,19 +60,24 @@ def get_first_word(sentence):
 # Get first letter of WH questions (What and Which in this case)
 def get_question(sentence):
     first_word = get_first_word(sentence)
+    res_sentence = sentence.replace(first_word, '', 1)
     first_word = first_word.lower()
     if first_word in QUESTIONS:
-        return first_word
-    return 'NO'
+        return first_word, res_sentence 
+    return 'NO', sentence
 
 # Use this after get_question
 def extract_name(sequence):
     res_name, res, name_holder = [], [], []
     word_list = sequence.split(' ')
     for i in word_list:
+        if i == '':
+            continue
         if i[0] >= 'A' and i[0] <= 'Z':
             if i[-1] in SPEC_CHARS:
                 name_holder.append(i[:-1:])
+                res_name.append(' '.join(name_holder))
+                name_holder = []
             else:
                 name_holder.append(i)
         else:

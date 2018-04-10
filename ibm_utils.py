@@ -174,7 +174,7 @@ def add_doc(file_name):
     try:
         with open(os.path.join(os.getcwd(), file_name)) as fileinfo:
               add_doc = discovery.add_document(ENV_ID, COLLECTION_ID, file=fileinfo)
-              print(json.dumps(add_doc, indent=2))
+              print json.dumps(add_doc, indent = 2)
     except Exception as ex:
         print(str(ex))
         return False
@@ -191,6 +191,13 @@ def add_all_docs():
             return False
     return True
 
+def search(query):
+    result = discovery.query(environment_id = ENV_ID,
+            collection_id = COLLECTION_ID,
+            query = query, count = 20)
+    # print(json.dumps(result, indent = 2))
+    return result
+
 def startup_discovery():
     if not get_env():
         print("Get environment failed")
@@ -200,3 +207,4 @@ def startup_discovery():
         print("Get collection failed")
     else:
         print("Startup success")
+

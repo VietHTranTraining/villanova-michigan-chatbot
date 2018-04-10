@@ -1,11 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import json
+import re
 from consts import PLAYERS
-from ibm_utils import startup_discovery
-from str_utils import uni2str
+from ibm_utils import startup_discovery, search
+from str_utils import * 
 
 app = Flask(__name__, template_folder='templates')
 NAME = None
+PLAYER_NAMES = None
 CPU, P1 = 'cpu', 'P1'
 turns = P1 
 cur_quest = 0
@@ -15,7 +17,119 @@ def validate_answer(answer):
     return True, "yes"
 
 def find_answer(question):
-    return True, "Your mom"
+    global PLAYER_NAMES
+    qt = question
+    qt_category, query = '', ''
+    question_type, qt = get_question(qt)
+    if question_type.lower() not in QUESTIONS:
+        return True, "Invalid Question type: +1 for oppononent (which is me btw)"
+    qt, phrases = extract_quote_str(qt)
+    qt, names = extract_name(qt)
+    for phrase in phrases:
+        query += '\'' + phrase + '\' '
+    for name in names:
+        query += '\'' + name + '\' '
+    query += qt
+
+    search_result = search(query)
+
+    if search_result['matching_results'] == 0:
+        return False, "I don't know"
+    search_result = search_result['results']
+
+    if ('position' in qt) and (len(names) == 1):
+        for doc in search_result:
+            text = doc['text']
+            index_list = [i.start() for i in re.finditer(names[0], text)]
+            role = ''
+            for index in index_list:
+                if role != '':
+                    break
+                sentence = uni2str(get_sentence_by_index(text, index).lower())
+                if (names[0].lower() in sentence):
+                    role = ''
+                    if 'forward' in sentence:
+                        role += 'Forward'
+                    if 'guard' in sentence:
+                        if role != '':
+                            role += '/'
+                        role += 'Guard'
+                    if 'center' in sentence:
+                        role = 'Center'
+                    if role != '':
+                        return True, role
+            if role == '':
+                return False, "I don't know"
+    elif ('player' in qt) and (question_type == 'which'):
+        if PLAYER_NAMES is None:
+            PLAYER_NAMES = []
+            for key, val in PLAYERS.iteritems():
+                PLAYER_NAMES.append(key.lower())
+        is_found_name = False
+        for doc in search_result:
+            if is_found_name:
+                break
+            text = doc['text']
+            is_found_name = False
+            if len(phrases) > 0:
+                for phrase in phrases:
+                    if is_found_name:
+                        break
+                    index_list = [i.start() for i in re.finditer(phrase.lower(), text.lower())]
+                    for index in index_list:
+                        if is_found_name:
+                            break
+                        sentence = uni2str(get_sentence_by_index(text, index))
+                        sentence, sentence_names = extract_name(sentence)
+                        for sentence_name in sentence_names:
+                            if is_found_name:
+                                break
+                            elif sentence_name.lower() in PLAYER_NAMES:
+                                is_found_name = True 
+                                return True, sentence_name
+            elif len(names) > 0: 
+                if is_found_name:
+                    break
+                for name in names:
+                    if is_found_name:
+                        break
+                    index_list = [i.start() for i in re.finditer(name.lower(), text.lower())]
+                    for index in index_list:
+                        if is_found_name:
+                            break
+                        sentence = uni2str(get_sentence_by_index(text, index))
+                        sentence, sentence_names = extract_name(sentence)
+                        for sentence_name in sentence_names:
+                            if is_found_name:
+                                break
+                            elif (sentence_name.lower() in PLAYER_NAMES) and (sentence_name.lower() != name.lower()):
+                                is_found_name = True 
+                                return True, sentence_name
+            else:
+                qt_words = qt.split(' ')
+                for qt_word in qt_words:
+                    if is_found_name:
+                        break
+                    index_list = [i.start() for i in re.finditer(qt_word.lower(), text.lower())]
+                    for index in index_list:
+                        if is_found_name:
+                            break
+                        sentence = uni2str(get_sentence_by_index(text, index))
+                        sentence, sentence_names = extract_name(sentence)
+                        for sentence_name in sentence_names:
+                            if is_found_name:
+                                break
+                            elif (sentence_name.lower() in PLAYER_NAMES):
+                                is_found_name = True 
+                                return True, sentence_name
+            if not is_found_name:
+                return False, "I don't know"
+    elif ('team' in qt) and (question_type == 'which'):
+        print "Finding team"
+    elif (len(phrases) > 0) and (len(names) > 0):
+        print "Finding skill"
+    else:
+        print "Finding Enities"
 
 def gen_question():
     return "What is this?"
