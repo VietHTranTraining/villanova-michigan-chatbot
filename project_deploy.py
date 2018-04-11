@@ -4,13 +4,13 @@ from ibm_utils import startup_discovery, search, get_entities_type, get_keywords
         analyze_article, get_entities_type_nlu
 from str_utils import * 
 
-# import cf_deployment_tracker
+import cf_deployment_tracker
 import json
 import re
 import os
 import random
 
-# cf_deployment_tracker.track()
+cf_deployment_tracker.track()
 
 app = Flask(__name__, template_folder='templates')
 NAME = None
