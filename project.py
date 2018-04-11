@@ -1,9 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from consts import PLAYERS
+from ibm_utils import startup_discovery, search, get_entities_type, get_keywords
+from str_utils import * 
+
+# import cf_deployment_tracker
 import json
 import re
-from consts import PLAYERS
-from ibm_utils import startup_discovery, search, get_entities_type
-from str_utils import * 
+import os
+
+# cf_deployment_tracker.track()
 
 app = Flask(__name__, template_folder='templates')
 NAME = None
@@ -124,6 +129,8 @@ def find_answer(question):
                     sentence, sentence_names = extract_name(sentence)
                     for sentence_name in sentence_names:
                         entities_types = get_entities_type(doc, sentence_name)
+                        print sentence_name
+                        print entities_types
                         if (sentence_name not in names) and ("Organization" in entities_types):
                             is_found_team = True
                             return True, sentence_name
@@ -141,8 +148,23 @@ def find_answer(question):
             if not is_found_team:
                 return False, "I don't know"
     elif (len(phrases) > 0) and (len(names) > 0):
-        print "Finding skill"
-    elif (len(names) > 0):
+        is_found_skill = False
+        for doc in search_result:
+            text = doc['text']
+            for phrase in phrases:
+                index_list = [i.start() for i in re.finditer(phrase.lower(), text.lower())]
+                for index in index_list:
+                    sentence = uni2str(get_sentence_by_index(text, index))
+                    keywords = get_keywords(doc)
+                    for keyword in keywords:
+                        if keyword[0] >= 'A' and keyword[0] <= 'Z':
+                            continue
+                        elif keyword in sentence:
+                            is_found_skill = True
+                            return True, keyword
+        if not is_found_skill:
+            return False, "I don't know"
+    elif (len(names) == 1):
         is_found_entity = False
         for doc in search_result:
             for name in names:
@@ -211,8 +233,10 @@ def playGame():
         else:
             return jsonify(error = 'POST request error')
 
+port = int(os.getenv('PORT', 8000))
+
 if __name__ == "__main__":
     startup_discovery()
     app.secret_key = "super_secret_key"
     app.debug = True
-    app.run(host = '0.0.0.0', port = 5000)
+    app.run(host = '0.0.0.0', port = port)

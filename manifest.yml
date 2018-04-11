@@ -1,0 +1,8 @@
+---
+applications:
+ - name: march-madness 
+   buildpack: https://github.com/cloudfoundry/python-buildpack.git 
+   random-route: true
+   memory: 256M
+   stack: cflinuxfs2
+   timeout: 180 

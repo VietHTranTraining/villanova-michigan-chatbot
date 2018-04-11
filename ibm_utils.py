@@ -1,6 +1,7 @@
 from watson_developer_cloud import DiscoveryV1
 from config import DISCOVERY_USERNAME, DISCOVERY_PASSWORD
 from env_config import ENV_CONFIG
+from str_utils import *
 import json
 import os
 
@@ -17,6 +18,21 @@ ARTICLES_DIR = './articles'
 ENV_ID = None
 CONFIG_ID = None
 COLLECTION_ID = None
+
+def get_entities_type(doc, text):
+    res = []
+    entities = doc['enriched_text']['entities']
+    for en in entities:
+        if (uni2str(en['text']) == text) and (uni2str(en['type']) not in res):
+            res.append(split_cammel(uni2str(en['type'])))
+    return res
+
+def get_keywords(doc):
+    res = []
+    keywords = doc['enriched_text']['keywords']
+    for keyword in keywords:
+        res.append(uni2str(keyword['text']))
+    return res
 
 def validate_env():
     if ENV_ID is None:

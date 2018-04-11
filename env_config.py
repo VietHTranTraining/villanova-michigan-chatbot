@@ -96,7 +96,8 @@ ENV_CONFIG = {
               "categories": {},
               "concepts": {
                 "limit": 8
-              }
+              },
+              "keywords": {}
             }
           }
         }

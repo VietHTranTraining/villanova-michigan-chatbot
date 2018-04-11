@@ -6,6 +6,10 @@ UNIMPORT_WORDS = ['was', 'were', 'in', 'on', '']
 QUOTES = ['\'', '"']
 SPEC_CHARS = [',', '.', '?', '!']
 END_SENTENCE = ['.', '!', '?', '\n']
+BLANK_SPACES = [' ', '\n', '\t']
+
+def is_number(char):
+    return char >= '1' and char <= '9'
 
 # Find sentence in the string where the index is located
 def get_sentence_by_index(paragraph, index):
@@ -13,7 +17,9 @@ def get_sentence_by_index(paragraph, index):
     while (left >= 0) and (paragraph[left] not in END_SENTENCE):
         left -= 1
     left += 1
-    while (right < len(paragraph)) and (paragraph[right] not in END_SENTENCE):
+    while (right < len(paragraph)) and \
+        ((paragraph[right] not in END_SENTENCE) or \
+                ((right < (len(paragraph) + 1)) and (paragraph[right + 1] not in BLANK_SPACES))):
         right += 1
     return paragraph[left:right]
 
@@ -24,10 +30,12 @@ def uni2str(uncd):
 # Insert space between each word in cammel case form
 def split_cammel(sentence):
     res = ''
-    for i in sentence:
-        if i >= 'A' and i <= 'Z':
+    for i in range(len(sentence)):
+        c = sentence[i]
+        if c >= 'A' and c <= 'Z' and i != 0:
             res += ' '
-        res += i
+        res += c
+    return res
 
 # Exctract phrase enclosed in quotes or double quotes
 def extract_quote_str(sentence):
