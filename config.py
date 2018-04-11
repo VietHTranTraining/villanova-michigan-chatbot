@@ -1,2 +1,5 @@
-DISCOVERY_USERNAME = '<your service username>'
-DISCOVERY_PASSWORD = '<your service password>'
+DISCOVERY_USERNAME = '<your IBM Discovery username>'
+DISCOVERY_PASSWORD = '<your IBM Discovery password>'
+
+NLU_USERNAME = '<your IBM NLU username>'
+NLU_PASSWORD = '<your IBM NLU password>'

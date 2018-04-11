@@ -70,6 +70,7 @@ $(function() {
         println(name + ': ' + data['reply']);
         textInput.val('');
         messageOutput.append(processingStatus);
+        textInput.attr('disabled', 'disabled');
         $.ajax({
             type: "POST",
             url: "{{ url_for('playGame') }}",
@@ -77,6 +78,7 @@ $(function() {
             contentType: "application/json;charset=UTF-8",
             success: function(response) {
                 messageOutput.children().last().remove();
+                textInput.removeAttr('disabled');
                 println('Caridin: ' + response['reply']);
                 if (response.hasOwnProperty('name')) {
                     name = response['name'];
@@ -86,7 +88,7 @@ $(function() {
                     println('Caridin: Thank you for playing!');
                     $('#id').remove();
                 } else if (response.hasOwnProperty('question')) {
-                    println(response['question']);
+                    println('Caridin: ' + response['question']);
                 } else if (response.hasOwnProperty('error')) {
                     println(response['error']);
                 }

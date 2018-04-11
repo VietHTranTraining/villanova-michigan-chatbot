@@ -1,5 +1,7 @@
-from watson_developer_cloud import DiscoveryV1
-from config import DISCOVERY_USERNAME, DISCOVERY_PASSWORD
+from watson_developer_cloud import DiscoveryV1, NaturalLanguageUnderstandingV1
+from watson_developer_cloud.natural_language_understanding_v1 \
+          import Features, EntitiesOptions, KeywordsOptions
+from config import DISCOVERY_USERNAME, DISCOVERY_PASSWORD, NLU_USERNAME, NLU_PASSWORD
 from env_config import ENV_CONFIG
 from str_utils import *
 import json
@@ -11,6 +13,12 @@ discovery = DiscoveryV1(
     version = '2017-11-07'
 )
 
+nlu = NaturalLanguageUnderstandingV1(
+    username=NLU_USERNAME,
+    password=NLU_PASSWORD,
+    version='2018-03-16'
+)
+
 ENV_NAME = 'mm-env'
 CONFIG_NAME = 'mm-config'
 COLLECTION_NAME = 'mm-collection'
@@ -19,20 +27,50 @@ ENV_ID = None
 CONFIG_ID = None
 COLLECTION_ID = None
 
-def get_entities_type(doc, text):
+# Get all posible entity type of an entity in a searched document
+# Return a list of possible type of that entity
+def get_entities_type(doc, entity):
     res = []
     entities = doc['enriched_text']['entities']
     for en in entities:
-        if (uni2str(en['text']) == text) and (uni2str(en['type']) not in res):
+        if (uni2str(en['text']) == entity) and (uni2str(en['type']) not in res):
             res.append(split_cammel(uni2str(en['type'])))
     return res
 
+# Get all keywords of a searched document
+# Return a list of keywords extracted from document
 def get_keywords(doc):
     res = []
     keywords = doc['enriched_text']['keywords']
     for keyword in keywords:
         res.append(uni2str(keyword['text']))
     return res
+
+# Analyze article from its url
+# Return a dictionary containing analysis result
+def analyze_article(url):
+    response = nlu.analyze(
+        url=url,
+        features=Features(
+            entities=EntitiesOptions(
+                emotion=True,
+                sentiment=True,
+                limit=2),
+            keywords=KeywordsOptions(
+                emotion=True,
+                sentiment=True,
+                limit=2)))
+    return response
+
+# Get all entities types from the nlu analysis
+# Return a list of entity types
+def get_entities_type_nlu(entities):
+    types = []
+    for entity in entities:
+        tp = split_cammel(uni2str(entity['type']))
+        if tp not in types:
+            types.append(tp)
+    return types
 
 def validate_env():
     if ENV_ID is None:

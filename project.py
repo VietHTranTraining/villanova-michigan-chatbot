@@ -1,35 +1,151 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from consts import PLAYERS
-from ibm_utils import startup_discovery, search, get_entities_type, get_keywords
+from players_info import PLAYERS
+from ibm_utils import startup_discovery, search, get_entities_type, get_keywords, \
+        analyze_article, get_entities_type_nlu
 from str_utils import * 
 
-# import cf_deployment_tracker
+import cf_deployment_tracker
 import json
 import re
 import os
+import random
 
-# cf_deployment_tracker.track()
+cf_deployment_tracker.track()
 
 app = Flask(__name__, template_folder='templates')
 NAME = None
 PLAYER_NAMES = None
-CPU, P1 = 'cpu', 'P1'
+CPU, P1 = 'cpu', 'P1' # Used to identify turns
 turns = P1 
 cur_quest = 0
-points = [0, 0]
+points = [0, 0] # 0: cpu score, 1: player score
 
+# Robot's category of questions
+BOT_QT_CATEGORY = ['position', 'player', 'team', 'entities']
+
+# Possible article urls used for entities category questions
+ARTICLE_URLS = [
+    "http://www.espn.com/espn/print?id=22993116&type=Story&imagesPrint=off",
+    "http://www.espn.com/espn/print?id=23055725&type=HeadlineNews&imagesPrint=off",
+    "http://www.espn.com/espn/print?id=23020772",
+    "http://www.espn.com/espn/print?id=23019054",
+    "http://www.espn.com/espn/print?id=23007564&type=Story&imagesPrint=off"
+]
+POSITIONS = [["G"], ["G", "F"], ["C"]]
+bot_qt_category = '' # Current bot question category
+bot_qt_expected_ans = '' # Current bot question expected answer
+question_history = [] # Storing bot previous questions
+
+# Check if bot ask the same question
+def check_repeated_question(question):
+    global question_history
+    return question in question_history
+
+# Generate chat bot questions
+# Return question category (in str), question, and expected answer (or possible answers)
+def gen_question():
+    global question_history
+    is_repeated_history = True
+    while is_repeated_history:
+        # Pick random question category: position, player, entities
+        question_category = random.choice(BOT_QT_CATEGORY)
+        if question_category == 'position':
+            player = random.choice(PLAYERS.keys())
+            question = "What is the position of " + player + "? (Guard/Forward/Center)"
+            position = get_position_str(PLAYERS[player]['role']) 
+            is_repeated_history = check_repeated_question(question)
+            if is_repeated_history:
+                continue
+            else:
+                return question_category, question, position
+        elif question_category == 'team':
+            player = random.choice(PLAYERS.keys())
+            question = "Which team does " + player + " in?"
+            is_repeated_history = check_repeated_question(question)
+            if is_repeated_history:
+                continue
+            else:
+                return question_category, question, PLAYERS[player]['team']
+        elif question_category == 'player':
+            player = random.choice(PLAYERS.keys())
+            team = PLAYERS[player]['team']
+            position = PLAYERS[player]['role']
+            question = "Whose position is " + get_position_str(position) + \
+                    " in " + team + '?'
+            expected_ans = {
+                'position': position,
+                'team': team,
+            }
+            is_repeated_history = check_repeated_question(question)
+            if is_repeated_history:
+                continue
+            else:
+                return question_category, question, expected_ans 
+        elif question_category == 'entities': 
+            article_url = random.choice(ARTICLE_URLS)
+            analysis = analyze_article(article_url)
+            entities = analysis['entities']
+            entity = random.choice(entities)
+            entity_txt = uni2str(entity['text'])
+            expected_type = split_cammel(uni2str(entity['type']))
+            entity_types = get_entities_type_nlu(entities)
+            question = ''
+            if len(entity_types) > 1:
+                question = 'What is ' + entity_txt + '? (' + ', '.join(entity_types) + ')'
+            else:
+                question = 'What is ' + entity_txt + '?'
+            is_repeated_history = check_repeated_question(question)
+            if is_repeated_history:
+                continue
+            else:
+                return question_category, question, expected_type 
+
+# Validate user answer
+# Return check if answer is correct (True: correct, False: incorrect, and reply message
 def validate_answer(answer):
-    return True, "yes"
+    global bot_qt_category, bot_qt_expected_ans
+    if answer == 'sorry':
+        return False, 'no'
+    elif bot_qt_category in ['position', 'entities']:
+        if bot_qt_expected_ans.lower() != answer.lower():
+            return False, 'no'
+        else:
+            return True, 'yes'
+    elif bot_qt_category == 'team':
+        # Split team name: '<location> <mascot>' to ['<location>', 'mascot']
+        team_names = bot_qt_expected_ans.split(' ') 
+        if answer == bot_qt_expected_ans or answer in team_names:
+            return True, 'yes'
+        else:
+            return False, 'no'
+    elif bot_qt_category == 'player':
+        if (answer not in PLAYERS) or \
+                (PLAYERS[answer]['team'] != bot_qt_expected_ans['team']) or \
+                (PLAYERS[answer]['role'] != bot_qt_expected_ans['position']):
+            return False, 'no'
+        else:
+            return True, 'yes'
 
+# Find answer based on user question
+# Return if bot is correct (True: correct, False: not found) and reply message
 def find_answer(question):
     global PLAYER_NAMES
+
     qt = question
     qt_category, query = '', ''
     question_type, qt = get_question(qt)
+
+    # Invalid question type
     if question_type.lower() not in QUESTIONS:
         return True, "Invalid Question type: +1 for oppononent (which is me btw)"
+    
+    # Extract quoted phrase from question
     qt, phrases = extract_quote_str(qt)
+
+    # Extract names from question
     qt, names = extract_name(qt)
+
+    # Create querry string
     for phrase in phrases:
         query += '\'' + phrase + '\' '
     for name in names:
@@ -38,10 +154,12 @@ def find_answer(question):
 
     search_result = search(query)
 
+    # If there is not result than bot is wrong
     if search_result['matching_results'] == 0:
         return False, "I don't know"
     search_result = search_result['results']
 
+    # Question is about a position of a player
     if ('position' in qt) and (len(names) == 1):
         for doc in search_result:
             text = doc['text']
@@ -63,9 +181,9 @@ def find_answer(question):
                         role = 'Center'
                     if role != '':
                         return True, role
-            if role == '':
-                return False, "I don't know"
-    elif ('player' in qt) and (question_type == 'which'):
+        if role == '':
+            return False, "I don't know"
+    elif ('player' in qt) and (question_type == 'which'): # Question is about a player
         if PLAYER_NAMES is None:
             PLAYER_NAMES = []
             for key, val in PLAYERS.iteritems():
@@ -109,9 +227,9 @@ def find_answer(question):
                             if (sentence_name.lower() in PLAYER_NAMES):
                                 is_found_name = True 
                                 return True, sentence_name
-            if not is_found_name:
-                return False, "I don't know"
-    elif ('team' in qt) and (question_type == 'which'):
+        if not is_found_name:
+            return False, "I don't know"
+    elif ('team' in qt) and (question_type == 'which'): # Question is about team
         for doc in search_result:
             text = doc['text']
             is_found_team = False
@@ -129,8 +247,6 @@ def find_answer(question):
                     sentence, sentence_names = extract_name(sentence)
                     for sentence_name in sentence_names:
                         entities_types = get_entities_type(doc, sentence_name)
-                        print sentence_name
-                        print entities_types
                         if (sentence_name not in names) and ("Organization" in entities_types):
                             is_found_team = True
                             return True, sentence_name
@@ -145,9 +261,9 @@ def find_answer(question):
                             if "Organization" in entities_types:
                                 is_found_name = True 
                                 return True, sentence_name
-            if not is_found_team:
-                return False, "I don't know"
-    elif (len(phrases) > 0) and (len(names) > 0):
+        if not is_found_team:
+            return False, "I don't know"
+    elif (len(phrases) > 0) and (len(names) > 0): # Question is about skill
         is_found_skill = False
         for doc in search_result:
             text = doc['text']
@@ -164,7 +280,7 @@ def find_answer(question):
                             return True, keyword
         if not is_found_skill:
             return False, "I don't know"
-    elif (len(names) == 1):
+    elif (len(names) == 1): # Question is about an entity
         is_found_entity = False
         for doc in search_result:
             for name in names:
@@ -177,9 +293,9 @@ def find_answer(question):
     else:
         return False, "I don't know"
 
-def gen_question():
-    return "What is this?"
 
+# Calculate result after the game
+# Return string display of result and string scoreboard
 def calc_result():
     result = 'CPU wins'
     if points[1] > points[0]:
@@ -191,20 +307,20 @@ def calc_result():
 
 @app.route('/', methods=['GET', 'POST'])
 def playGame():
-    global NAME, points, turns, cur_quest
+    global NAME, points, turns, cur_quest, bot_qt_category, bot_qt_expected_ans
 
     if request.method == 'GET':
         NAME, points, turns, cur_quest = None, [0, 0], P1, 0
         return render_template('index.html')
     elif request.method == 'POST':
         data = request.json
-        if NAME is None:
+        if NAME is None: # Initially, ask use for name
             NAME = uni2str(data['reply'])
             bot_reply = 'Hello ' + NAME + '! Let\'s get started! You will ask first.'
             return jsonify(name = NAME, reply = bot_reply)
-        elif cur_quest >= 10:
+        elif cur_quest >= 10: # if number of questions is 10 or over. Don't continue playing
             return jsonify(reply = 'The game is over. Please reload to play again.')
-        elif turns == P1:
+        elif turns == P1: # If this is player turns to ask question
             turns = CPU
             question = uni2str(data['reply'])
             is_correct, reply = find_answer(question)
@@ -213,10 +329,9 @@ def playGame():
             else:
                 points[1] += 1
             cur_quest += 1
-            bot_question = gen_question()
-            print bot_question
+            bot_qt_category, bot_question, bot_qt_expected_ans = gen_question()
             return jsonify(reply = reply, question = bot_question)
-        elif turns == CPU:
+        elif turns == CPU: # If this is CPU turns to ask question
             turns = P1
             answer = uni2str(data['reply'])
             is_correct, reply = validate_answer(answer)
@@ -225,7 +340,7 @@ def playGame():
             else:
                 points[0] += 1
             cur_quest += 1
-            if cur_quest == 10:
+            if cur_quest == 10: # Check if this is the last question
                 result, score_board = calc_result()
                 return jsonify(reply = reply, result = result, score_board = score_board)
             else:

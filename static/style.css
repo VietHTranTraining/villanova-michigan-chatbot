@@ -10,10 +10,10 @@ body {
     overflow: hidden;
 }
 
-#stretchbox input {
-    background-color: #000;
+input {
+    background-color: grey;
     border: 0px solid;
-    color: #00FF00;
+    color: black;
     font-family: "Courier New"; 
     line-height: 130%;
     font-size: 18px;

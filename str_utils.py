@@ -1,17 +1,12 @@
 import unicodedata
 
-QUESTIONS = ['which', 'what']
-QT_CATEGORY = ['position', 'player', 'team', 'skill', '']
-UNIMPORT_WORDS = ['was', 'were', 'in', 'on', '']
-QUOTES = ['\'', '"']
-SPEC_CHARS = [',', '.', '?', '!']
-END_SENTENCE = ['.', '!', '?', '\n']
-BLANK_SPACES = [' ', '\n', '\t']
+QUESTIONS = ['which', 'what'] # Types of questions
+QUOTES = ['\'', '"'] # Quoute characters
+SPEC_CHARS = [',', '.', '?', '!'] # Special characters
+END_SENTENCE = ['.', '!', '?', '\n'] # Sentence-ending characters
+BLANK_SPACES = [' ', '\n', '\t'] # Blank spaces
 
-def is_number(char):
-    return char >= '1' and char <= '9'
-
-# Find sentence in the string where the index is located
+# Find sentence in the paragraph where the index is located
 def get_sentence_by_index(paragraph, index):
     left, right = index, index
     while (left >= 0) and (paragraph[left] not in END_SENTENCE):
@@ -27,17 +22,19 @@ def get_sentence_by_index(paragraph, index):
 def uni2str(uncd):
    return unicodedata.normalize('NFKD', uncd).encode('ascii','ignore')
 
-# Insert space between each word in cammel case form
-def split_cammel(sentence):
+# Insert space between each word in cammel case string 
+# Return the updated string 
+def split_cammel(cammel_str):
     res = ''
-    for i in range(len(sentence)):
-        c = sentence[i]
+    for i in range(len(cammel_str)):
+        c = cammel_str[i]
         if c >= 'A' and c <= 'Z' and i != 0:
             res += ' '
         res += c
     return res
 
 # Exctract phrase enclosed in quotes or double quotes
+# Return the sentence and the list of quoted phrases
 def extract_quote_str(sentence):
     res, quote_holder = '', ''
     res_quote, is_in_quote = [], ' '
@@ -66,6 +63,7 @@ def get_first_word(sentence):
     return res
 
 # Get first letter of WH questions (What and Which in this case)
+# Return the type of question (in str) and the remaining sentence without the WH question
 def get_question(sentence):
     first_word = get_first_word(sentence)
     res_sentence = sentence.replace(first_word, '', 1)
@@ -74,10 +72,11 @@ def get_question(sentence):
         return first_word, res_sentence 
     return 'NO', sentence
 
-# Use this after get_question
-def extract_name(sequence):
+# Cut the name from the sentence
+# Return the remaining sentence and list of name (in that order)
+def extract_name(sentence):
     res_name, res, name_holder = [], [], []
-    word_list = sequence.split(' ')
+    word_list = sentence.split(' ')
     for i in word_list:
         if i == '':
             continue
@@ -96,3 +95,18 @@ def extract_name(sequence):
     if len(name_holder) > 0:
         res_name.append(' '.join(name_holder))
     return ' '.join(res), res_name
+
+# Convert list of positions initial to string literal
+def get_position_str(pos_lst):
+    res = ''
+    if "G" in pos_lst:
+        res += "Guard"
+    if "F" in pos_lst:
+        if res != '':
+            res += '/'
+        res += "Forward"
+    if "C" in pos_lst:
+        res += "Center"
+    return res
+
+
